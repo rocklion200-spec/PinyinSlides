@@ -18,6 +18,11 @@ import shutil
 import sys
 from pathlib import Path
 
+from pinyin_slides.cli import (
+    load_config_file,
+    log_song_summary,
+    read_lyrics_or_exit,
+)
 from pinyin_slides.html_renderer import (
     DEFAULT_CHINESE_LINES_PER_COL,
     DEFAULT_ENGLISH_LINES_PER_COL,
@@ -52,6 +57,10 @@ def main():
                         default=DEFAULT_ENGLISH_LINES_PER_COL,
                         help='Max lyric lines per column on an English slide '
                              'before splitting to a new slide')
+    parser.add_argument('--config', default=None, metavar='FILE',
+                        help='TOML config file (auto-discovered from config.toml or '
+                             '~/.pinyin-slides/config.toml if omitted). Honored keys: '
+                             'chinese_lines_per_col, english_lines_per_col.')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -60,11 +69,24 @@ def main():
         level=logging.DEBUG if args.verbose else logging.INFO,
     )
 
+    toml = load_config_file(args.config)
+
+    # CLI > TOML > default.
+    def _resolve_int(cli_val, cli_default, toml_key):
+        if cli_val != cli_default:
+            return cli_val
+        raw = toml.get(toml_key)
+        return int(raw) if raw is not None else cli_val
+
+    chinese_lines_per_col = _resolve_int(
+        args.chinese_lines_per_col, DEFAULT_CHINESE_LINES_PER_COL,
+        'chinese_lines_per_col')
+    english_lines_per_col = _resolve_int(
+        args.english_lines_per_col, DEFAULT_ENGLISH_LINES_PER_COL,
+        'english_lines_per_col')
+
     lyrics_path = Path(args.lyrics)
-    if not lyrics_path.exists():
-        log.error('File not found: %s', lyrics_path)
-        sys.exit(1)
-    lyrics_text = lyrics_path.read_text(encoding='utf-8')
+    lyrics_text = read_lyrics_or_exit(lyrics_path, log)
 
     output_path = (
         Path(args.output) if args.output
@@ -90,8 +112,8 @@ def main():
 
     html = render_document(
         songs, title=title, css_href=css_href,
-        chinese_lines_per_col=args.chinese_lines_per_col,
-        english_lines_per_col=args.english_lines_per_col,
+        chinese_lines_per_col=chinese_lines_per_col,
+        english_lines_per_col=english_lines_per_col,
     )
     output_path.write_text(html, encoding='utf-8')
     log.info('Saved: %s  (%d KB)', output_path, len(html.encode('utf-8')) // 1024)
@@ -103,12 +125,7 @@ def main():
         else:
             log.warning('Default CSS not found at %s; skipping.', _DEFAULT_CSS)
 
-    log.info('  Songs: %d', len(songs))
-    for i, (song, overrides) in enumerate(songs):
-        lang = overrides.get('language', song.language)
-        title_disp = song.title_zh or '(untitled)'
-        log.info('  Song %d [%s]: %s — %d section(s)',
-                 i + 1, lang, title_disp, len(song.sections))
+    log_song_summary(songs, log)
 
 
 if __name__ == '__main__':

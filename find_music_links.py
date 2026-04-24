@@ -22,22 +22,14 @@ from urllib.parse import parse_qs, urlparse
 log = logging.getLogger(__name__)
 
 try:
-    import requests
     from bs4 import BeautifulSoup
 except ImportError as exc:
     sys.exit(f"Missing dependency: {exc}\nInstall: pip install requests beautifulsoup4")
 
+from pinyin_slides.http_utils import fetch_html as _shared_fetch_html
+
 BASE = "https://www.churchofjesuschrist.org"
 MUSIC_SONGS = f"{BASE}/media/music/songs"
-
-_HEADERS = {
-    'User-Agent': (
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) '
-        'Chrome/120.0.0.0 Safari/537.36'
-    ),
-    'Accept-Language': 'en-US,en;q=0.9',
-}
 
 # Collection IDs in preference order (earlier = preferred)
 COLLECTIONS = [
@@ -223,46 +215,11 @@ SONGS: list[dict] = [
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Fetching helpers
+# Fetching helper (shared logic in pinyin_slides.http_utils)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_CHROME_PATHS = [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium',
-]
-
-
 def _fetch_html(url: str) -> str:
-    """Fetch page HTML, falling back to Playwright on TLS/connection errors."""
-    try:
-        resp = requests.get(url, headers=_HEADERS, timeout=20)
-        resp.raise_for_status()
-        return resp.content.decode('utf-8', errors='replace')
-    except requests.exceptions.ConnectionError:
-        log.debug("requests failed (TLS?), trying Playwright for %s", url)
-    except requests.exceptions.HTTPError as e:
-        raise SystemExit(f"HTTP {e.response.status_code} fetching {url}")
-
-    try:
-        from playwright.sync_api import sync_playwright
-        chrome = next((p for p in _CHROME_PATHS if Path(p).exists()), None)
-        launch_opts: dict = {'headless': True}
-        if chrome:
-            launch_opts['executable_path'] = chrome
-        with sync_playwright() as p:
-            browser = p.chromium.launch(**launch_opts)
-            try:
-                page = browser.new_page()
-                page.goto(url, timeout=30000)
-                return page.content()
-            finally:
-                browser.close()
-    except Exception as e:
-        raise SystemExit(
-            f"Couldn't fetch {url}\n"
-            f"  Playwright also failed: {e}\n"
-            f"  Install: pip install playwright && playwright install chromium"
-        )
+    return _shared_fetch_html(url)
 
 
 def _extract_render_data(html: str, url: str):

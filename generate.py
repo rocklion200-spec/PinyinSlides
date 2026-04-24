@@ -39,7 +39,13 @@ import re
 import sys
 from pathlib import Path
 
-from pinyin_slides.cli import load_config_file, make_slide_config, build_pptx_from_lyrics
+from pinyin_slides.cli import (
+    build_pptx_from_lyrics,
+    load_config_file,
+    log_song_summary,
+    make_slide_config,
+    read_lyrics_or_exit,
+)
 
 log = logging.getLogger(__name__)
 
@@ -77,9 +83,9 @@ def main():
     parser.add_argument('--pinyin-font-index', type=int, default=None,
                         help='Font index within a .ttc collection for pinyin (default: 0)')
     parser.add_argument('--char-font', default=None,
-                        help='Path to .otf/.ttf/.ttc font for characters (default: PingFang SC Regular)')
+                        help='Path to .otf/.ttf/.ttc font for characters (default: bundled Noto Sans SC Regular)')
     parser.add_argument('--char-font-index', type=int, default=None,
-                        help='Font index within a .ttc collection for characters (default: 3 for PingFang SC)')
+                        help='Font index within a .ttc collection for characters (default: 0)')
 
     parser.add_argument('--pinyin-size', type=int, default=68,
                         help='Pinyin font size in render pixels')
@@ -100,6 +106,16 @@ def main():
     parser.add_argument('--min-char-pt', type=int, default=None,
                         help='Minimum Chinese character height in pt (default: 28). '
                              'Lower this to allow denser packing on songs with many sections.')
+    parser.add_argument('--english-size', type=int, default=28,
+                        help='Starting target English font size in pt')
+
+    # Chorus deduplication
+    parser.add_argument('--dedup-chorus', action=argparse.BooleanOptionalAction,
+                        default=None,
+                        help='Collapse repeated choruses (first occurrence labeled '
+                             '"* Chorus:", later references indicated by trailing "*"). '
+                             'Default: off. Use --no-dedup-chorus to force off when '
+                             'TOML would enable it.')
 
     parser.add_argument('--config', default=None, metavar='FILE',
                         help='TOML config file for default SlideConfig values '
@@ -118,10 +134,7 @@ def main():
     config = make_slide_config(args, toml)
 
     lyrics_path = Path(args.lyrics)
-    if not lyrics_path.exists():
-        log.error("File not found: %s", lyrics_path)
-        sys.exit(1)
-    lyrics_text = lyrics_path.read_text(encoding='utf-8')
+    lyrics_text = read_lyrics_or_exit(lyrics_path, log)
 
     output_path = Path(args.output) if args.output else _default_output_path(lyrics_path)
 
@@ -132,16 +145,7 @@ def main():
         log.error("%s", e)
         sys.exit(1)
 
-    log.info("  Songs: %d", len(song_configs))
-    for i, (song, overrides) in enumerate(song_configs):
-        lang = overrides.get('language', 'chinese')
-        title = song.title_zh or "(untitled)"
-        section_summary = ', '.join(
-            f"{s.type[0].upper()}{s.number or ''}/{len(s.lines)}L"
-            for s in song.sections
-        )
-        log.info("  Song %d [%s]: %s — %d section(s) (%s)",
-                 i + 1, lang, title, len(song.sections), section_summary)
+    log_song_summary(song_configs, log)
 
     output_path.write_bytes(pptx_bytes)
     log.info("Saved: %s  (%d KB)", output_path, len(pptx_bytes) // 1024)

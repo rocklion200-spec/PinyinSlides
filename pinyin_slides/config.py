@@ -51,11 +51,12 @@ class Song:
 # Font directory bundled with the project
 _FONT_DIR = Path(__file__).parent.parent / "fonts"
 
-# Primary defaults: system Inter 28pt + PingFang SC (macOS)
+# Primary defaults: system Inter 28pt (pinyin) + bundled Noto Sans SC (characters).
+# PingFang SC can be selected explicitly via --char-font or TOML.
 _DEFAULT_PINYIN_FONT = str(Path.home() / "Library/Fonts/Inter_28pt-Regular.ttf")
 _DEFAULT_PINYIN_FONT_INDEX = 0
-_DEFAULT_CHAR_FONT = "/System/Library/AssetsV2/com_apple_MobileAsset_Font8/86ba2c91f017a3749571a82f2c6d890ac7ffb2fb.asset/AssetData/PingFang.ttc"
-_DEFAULT_CHAR_FONT_INDEX = 3   # PingFang SC Regular
+_DEFAULT_CHAR_FONT = str(_FONT_DIR / "NotoSansSC-Regular.otf")
+_DEFAULT_CHAR_FONT_INDEX = 0
 
 
 def _resolve_font(path: str, index: int, label: str) -> tuple[str, int]:
@@ -63,14 +64,11 @@ def _resolve_font(path: str, index: int, label: str) -> tuple[str, int]:
     if Path(path).exists():
         return path, index
 
-    # Fallbacks in priority order
+    # Fallbacks for the Inter pinyin default (Inter variants, then bundled semi-condensed).
     fallbacks = {
         _DEFAULT_PINYIN_FONT: [
             str(Path.home() / "Library/Fonts/Inter-Regular.ttf"),
             str(_FONT_DIR / "EncodeSansSemiCondensed-Regular.ttf"),
-        ],
-        _DEFAULT_CHAR_FONT: [
-            str(_FONT_DIR / "NotoSansSC-Regular.otf"),
         ],
     }
     for fallback in fallbacks.get(path, []):

@@ -1,0 +1,167 @@
+/* Default stylesheet for HTML-rendered pinyin slides.
+   Tunable CSS variables at the top; structural rules below. */
+
+:root {
+  --py-font: 'Inter', system-ui, sans-serif;
+  --ch-font: 'PingFang SC', 'Noto Sans SC', sans-serif;
+  --en-font: 'Inter', system-ui, sans-serif;
+
+  --ch-size: 32px;
+  --py-size: calc(var(--ch-size) * 0.71);
+  --en-size: 36px;
+
+  --inter-word-gap: 14px;
+  --line-spacing: 0;
+  --section-gap: 1.5rem;
+  --column-gap: 2rem;
+
+  --text-color: #000;
+  --muted-color: #666;
+  --slide-bg: #fff;
+  --slide-pad: 2rem;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  color: var(--text-color);
+  background: #eee;
+  font-family: var(--en-font);
+}
+
+.slide {
+  display: block;
+  background: var(--slide-bg);
+  padding: var(--slide-pad);
+  margin: 1rem auto;
+  max-width: 1200px;
+  aspect-ratio: 16 / 9;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  page-break-after: always;
+  position: relative;
+  overflow: hidden;
+}
+
+.slide-header {
+  position: absolute;
+  top: var(--slide-pad);
+  right: var(--slide-pad);
+  text-align: right;
+  color: var(--muted-color);
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.title {
+  font-size: 36px;
+  font-weight: normal;
+  margin: 0 0 1rem 0;
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+}
+.title-zh { font-family: var(--ch-font); }
+.title-py { font-family: var(--py-font); color: var(--muted-color); }
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  gap: var(--column-gap);
+  align-content: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.section {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  margin-bottom: var(--section-gap);
+  break-inside: avoid;
+}
+
+.section-chorus,
+.section-refrain,
+.section-bridge {
+  grid-template-columns: 1fr;
+}
+
+.verse-num,
+.section-label {
+  font-family: var(--en-font);
+  font-size: 1.05rem;
+  color: var(--muted-color);
+  padding-top: 0.4em;
+}
+.section-label { font-style: italic; }
+
+.section-body {
+  min-width: 0;
+}
+
+/* A line is a row of rubies (words) and punctuation, wrapping if needed. */
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: var(--line-spacing);
+}
+.line:last-child { margin-bottom: 0; }
+
+/* The jukugo ruby: one per pinyin word. CSS Ruby spec sizes each base/rt
+   column to max(base, annotation) with the narrower child centered
+   (ruby-align: center is the default). That's the unit_w = max(pinyin, char)
+   rule from the Python renderer, handled natively. */
+ruby {
+  ruby-position: over;
+  ruby-align: center;
+  font-family: var(--ch-font);
+  font-size: var(--ch-size);
+  line-height: 1.1;
+}
+
+rt {
+  font-family: var(--py-font);
+  font-size: var(--py-size);
+  line-height: 1;
+  font-weight: normal;
+}
+
+/* Inter-word gap: between adjacent rubies, and around punctuation. */
+ruby + ruby,
+.punct + ruby,
+ruby + .punct {
+  margin-left: var(--inter-word-gap);
+}
+
+.punct {
+  font-family: var(--ch-font);
+  font-size: var(--ch-size);
+  line-height: 1.2;
+  align-self: flex-end;
+}
+
+.ch {
+  font-family: var(--ch-font);
+  font-size: var(--ch-size);
+  line-height: 1.2;
+  align-self: flex-end;
+}
+
+/* English sections: plain paragraph-style lines, no ruby. */
+.line.english {
+  font-family: var(--en-font);
+  font-size: var(--en-size);
+  line-height: 1.35;
+  margin-bottom: 0.25em;
+  display: block;
+}
+
+@media print {
+  html, body { background: #fff; }
+  .slide { box-shadow: none; margin: 0; max-width: none; }
+}

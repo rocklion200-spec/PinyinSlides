@@ -8,7 +8,7 @@ venv/
 
 # Generated slide output (re-created by generate.py / generate_html.py)
 *.pptx
-*.html
+/*.html
 
 # Generated CSS at root (not pinyin_slides/html_assets/slides.css source file)
 /*.css

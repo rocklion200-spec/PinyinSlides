@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv*/
+venv/
+.env
+
+# Generated slide output (re-created by generate.py / generate_html.py)
+*.pptx
+*.html
+*.css
+
+# Generated font-comparison images at project root
+font_*.png
+font_test_*.png
+
+# macOS
+.DS_Store

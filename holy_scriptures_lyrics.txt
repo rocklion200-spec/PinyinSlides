@@ -1,0 +1,74 @@
+[song]
+columns: 2
+
+[chinese]
+當我研讀神聖經文
+
+1. 當我研讀神聖經文，
+天父求祢帶領我，
+賜祢智慧充滿我心，
+求祢啟發我心靈。
+
+2. 當我研讀神聖經文，
+求主呼喚我靈魂，
+日復一日勤勉學習，
+求祢顯福音奧秘。
+
+3. 當我研讀神聖經文，
+求祢憐憫我軟弱，
+慰我愁苦免我煩憂，
+求治我內心傷痛。
+
+4. 當我研讀神聖經文，
+助我沈思祢旨意，
+祢的話語，賜我生命，
+求指引永恆真理。
+
+[pinyin]
+Dāng wǒ yándú shénshèng jīngwén
+
+1. Dāng wǒ yándú shénshèng jīngwén,
+Tiānfù qiú nín dàilǐng wǒ,
+Cì nín zhìhuì chōngmǎn wǒ xīn,
+Qiú nín qǐfā wǒ xīnlíng.
+
+2. Dāng wǒ yándú shénshèng jīngwén,
+Qiú Zhǔ hūhuàn wǒ línghún,
+Rìfùyírì qínmiǎn xuéxí,
+Qiú nín xiǎn Fúyīn àomì.
+
+3. Dāng wǒ yándú shénshèng jīngwén,
+Qiú nín liánmǐn wǒ ruǎnruò,
+Wèi wǒ chóukǔ miǎn wǒ fányōu,
+Qiú zhì wǒ nèixīn shāngtòng.
+
+4. Dāng wǒ yándú shénshèng jīngwén,
+Zhù wǒ chénsī nín zhǐyì,
+Nín di huàyǔ, cì wǒ shēngmìng,
+Qiú zhǐyǐn yǒnghéng zhēnlǐ.
+
+[song]
+language: english
+
+[english]
+As I Search the Holy Scriptures
+
+1. As I search the holy scriptures,
+Loving Father of mankind,
+May my heart be blessed with wisdom,
+And may knowledge fill my mind.
+
+2. As I search the holy scriptures,
+Touch my spirit, Lord, I pray.
+May life’s myst’ries be unfolded
+As I study day by day.
+
+3. As I search the holy scriptures,
+May thy mercy be revealed.
+Soothe my troubled heart and spirit;
+May my unseen wounds be healed.
+
+4. As I search the holy scriptures,
+Help me ponder and obey.
+In thy word is life eternal;
+May thy light show me the way.

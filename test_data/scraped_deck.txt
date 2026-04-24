@@ -1,0 +1,58 @@
+[song]
+language: english
+
+[english]
+Keep the Commandments
+
+1. Keep the commandments; keep the commandments!
+In this there is safety; in this there is peace.
+He will send blessings;
+He will send blessings.
+Words of a prophet:
+
+Chorus:
+Keep the commandments.
+In this there is safety and peace.
+
+2. We are His children; we are His children,
+and we must be tested to show we are true.
+Hold to His promises;
+Hold to His promises,
+Heeding the prophets:
+
+Chorus:
+Keep the commandments.
+In this there is safety and peace.
+
+[song]
+columns: 2
+
+[chinese]
+遵守神的誡命
+
+1. 遵守神的誡命；遵守神的誡命；
+必得到安全，必得到平安。
+祂將賜祝福；祂將賜祝福。
+聽先知話語，守神的誡命，
+必得到安全與平安。
+
+2. 我是神的孩子；我是神的孩子；
+需接受考驗，證明我忠信。
+切記祂應許；切記祂應許。
+聽從神先知，守神的誡命，
+必得到安全與平安。
+
+[pinyin]
+Zūnshǒu Shén di jièmìng
+
+1. Zūnshǒu Shén di jièmìng; zūnshǒu Shén di jièmìng!
+Bì dédào ānquán; bì dédào píngān.
+Tā jiāng cì zhùfú; tā jiāng cì zhùfú.
+Tīng xiānzhī huàyǔ, shǒu Shén di jièmìng,
+Bì dédào ānquán yǔ píngān.
+
+2. Wǒ shì Shén di háizi; Wǒ shì Shén di háizi;
+Xū jiēshòu kǎoyàn, zhèngmíng wǒ zhōngxìn.
+Qièjì tā yìngxǔ; qièjì tā yìngxǔ.
+Tīngcóng Shén xiānzhī, shǒu Shén di jièmìng,
+Bì dédào ānquán yǔ píngān.

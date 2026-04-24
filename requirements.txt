@@ -1,0 +1,7 @@
+pypinyin
+Pillow
+python-pptx
+requests
+beautifulsoup4
+pytest
+tomli; python_version < "3.11"

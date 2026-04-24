@@ -1,0 +1,18 @@
+# PinyinSlides configuration file
+# Copy to config.toml (project dir) or ~/.pinyin-slides/config.toml
+# CLI flags always override these values.
+
+[slides]
+columns = 2
+# rows_per_column = 3      # cap verses per column; omit for auto
+
+# Font paths (defaults use the bundled fonts/ directory)
+# pinyin_font_path = "fonts/EncodeSansSemiCondensed-Regular.ttf"
+# char_font_path   = "fonts/NotoSansSC-Regular.otf"
+# char_font_index  = 0
+
+# Font sizes (pixels at render resolution)
+# pinyin_font_size = 68
+# char_font_size   = 96
+
+# text_color = "#000000"

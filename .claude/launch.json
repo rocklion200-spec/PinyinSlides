@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "HTML Slides Preview",
+      "runtimeExecutable": ".venv312/bin/python3",
+      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "/Users/richard/Downloads/ClaudeCode/PinyinSlides"],
+      "port": 8080
+    }
+  ]
+}

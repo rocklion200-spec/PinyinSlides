@@ -1,0 +1,72 @@
+[song]
+language: english
+book: CSB
+page: 228–29
+
+[english]
+My Heavenly Father Loves Me
+
+1. Whenever I hear the song of a bird
+Or look at the blue, blue sky,
+Whenever I feel the rain on my face
+Or the wind as it rushes by,
+Whenever I touch a velvet rose
+Or walk by our lilac tree,
+I'm glad that I live in this beautiful world
+Heav'nly Father created for me.
+
+2. He gave me my eyes that I might see
+The color of butterfly wings.
+He gave me my ears that I might hear
+The magical sound of things.
+He gave me my life, my mind, my heart:
+I thank him rev'rently
+For all his creations, of which I'm a part.
+Yes, I know Heav'nly Father loves me.
+
+[song]
+columns: 2
+book: 兒童歌本
+page: 第16–17頁
+
+[chinese]
+我天父愛我
+
+1. 每當我聽見，小鳥歌唱，
+或抬頭望見藍天，
+每當小雨點，滑過臉龐，
+或微風輕輕拂面，
+每當我輕觸柔柔玫瑰，
+或漫步小樹邊，
+我感謝天父為我創造世界，
+賜我這美麗奇妙恩典。
+
+2. 祂賜我眼睛，使我看見
+蝴蝶的彩色翅膀，
+祂賜我雙耳，使我聽見
+奇妙的各種聲音，
+祂賜我生命，我心，我靈，
+我虔誠地感謝，
+我感謝天父創造所有一切，
+讓我知道我天父愛我。
+
+[pinyin]
+Wǒ Tiānfù ài wǒ
+
+1. Měi dāng wǒ tingjiàn, xiǎoniǎo gēchàng,
+Huò táitóu wàngjiàn lántiān,
+Měi dāng xiǎo yǔdiǎn, huáguò liǎnpáng,
+Huò wéifēng qīngqīng fú miàn,
+Měi dāng wǒ qīng chù róuróu méiguī,
+Huò mànbù xiǎoshù biān,
+Wǒ gǎnxiè Tiānfù wèi wǒ chuàngzào shìjiè,
+Cì wǒ zhè měilì qímiào ēndiǎn.
+
+2. Tā cì wǒ yǎnjīng, shǐ wǒ kànjiàn
+Húdié di cǎisè chìbǎng,
+Tā cì wǒ shuāngěr, shǐ wǒ tīngjiàn
+Qímiào di gè zhǒng shēngyīn,
+Tā cì wǒ shēngmìng, wǒ xīn, wǒ líng,
+Wǒ qiánchéng di gǎnxiè,
+Wǒ gǎnxiè Tiānfù chuàngzào suǒyǒu yīqiè,
+Ràng wǒ zhīdào wǒ Tiānfù ài wǒ.

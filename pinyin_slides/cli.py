@@ -1,12 +1,21 @@
-"""Shared CLI helpers for generate.py and scrape_lyrics.py.
+"""Shared CLI helpers for generate.py, generate_html.py, and scrape_lyrics.py.
 
 Terminology: "lyrics" refers to the .txt input format (with [song]/[chinese]/
 [pinyin]/[english] blocks). "Deck" refers to the PowerPoint slide deck output.
+
+Exports:
+    load_config_file(path)       — load [slides] section from a TOML file
+    make_slide_config(args, toml) — build a SlideConfig from argparse args + TOML
+    build_pptx_from_lyrics(text, config) — parse lyrics and build .pptx bytes
+    read_lyrics_or_exit(path)    — read a lyrics file or sys.exit(1) on missing
+    log_song_summary(song_configs, log) — print a per-song summary (shared by
+                                          generate.py and generate_html.py)
 """
 
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -81,7 +90,16 @@ def make_slide_config(args, toml: dict | None = None):
                               lambda v: int(v) if v is not None else None),
         min_char_pt=_pick(getattr(args, 'min_char_pt', None), None, 'min_char_pt',
                           lambda v: int(v) if v is not None else None),
+        english_font_size_pt=_pick(getattr(args, 'english_size', 28), 28,
+                                     'english_font_size_pt', int),
     )
+    # dedup_chorus uses argparse.BooleanOptionalAction: None = unset (fall back
+    # to TOML then SlideConfig default), True/False = explicit CLI.
+    dedup_cli = getattr(args, 'dedup_chorus', None)
+    if dedup_cli is not None:
+        cfg.dedup_chorus = bool(dedup_cli)
+    elif 'dedup_chorus' in toml:
+        cfg.dedup_chorus = bool(toml['dedup_chorus'])
     # Font paths: CLI flag → TOML → SlideConfig default (bundled font)
     if getattr(args, 'pinyin_font', None):
         cfg.pinyin_font_path = args.pinyin_font
@@ -122,3 +140,29 @@ def build_pptx_from_lyrics(lyrics_text: str, config):
         raise ValueError("No songs found in lyrics file.")
     pptx_bytes = build_deck(song_configs, config)
     return pptx_bytes, song_configs
+
+
+# ── Shared entry-point helpers ────────────────────────────────────────────────
+
+def read_lyrics_or_exit(path: Path, logger: logging.Logger | None = None) -> str:
+    """Read a lyrics .txt file as UTF-8, or sys.exit(1) with an error log."""
+    logger = logger or log
+    if not path.exists():
+        logger.error("File not found: %s", path)
+        sys.exit(1)
+    return path.read_text(encoding='utf-8')
+
+
+def log_song_summary(song_configs, logger: logging.Logger | None = None) -> None:
+    """Log a one-line-per-song summary of parsed songs."""
+    logger = logger or log
+    logger.info("  Songs: %d", len(song_configs))
+    for i, (song, overrides) in enumerate(song_configs):
+        lang = overrides.get('language', song.language)
+        title = song.title_zh or "(untitled)"
+        section_summary = ', '.join(
+            f"{s.type[0].upper()}{s.number or ''}/{len(s.lines)}L"
+            for s in song.sections
+        )
+        logger.info("  Song %d [%s]: %s — %d section(s) (%s)",
+                    i + 1, lang, title, len(song.sections), section_summary)

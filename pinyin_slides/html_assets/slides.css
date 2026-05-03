@@ -1,34 +1,82 @@
-/* Default stylesheet for HTML-rendered pinyin slides.
-   Tunable CSS variables at the top; structural rules below. */
+/* ═══════════════════════════════════════════════════════════════
+   slides.css — Pinyin Slides refined design system
+   Updated April 2026 — drop into pinyin_slides/html_assets/
+
+   Font stack: Roboto (English) · Roboto Condensed (Pinyin) · Noto Sans HK (Chinese)
+   Add the Google Fonts <link> to the HTML <head> for these to load.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Google Fonts (add to <head> for web use) ─────────────────── */
+/* <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Roboto+Condensed:wght@300;400;500&family=Noto+Sans+HK:wght@300;400;500;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@300;400;500;700&display=swap" rel="stylesheet"> */
 
 :root {
-  --py-font: 'Inter', system-ui, sans-serif;
-  --ch-font: 'PingFang SC', 'Noto Sans SC', sans-serif;
-  --en-font: 'Inter', system-ui, sans-serif;
+  /* Fonts */
+  --py-font: 'Roboto Condensed', 'Barlow Semi Condensed', sans-serif;
+  --ch-font: 'Noto Sans HK', 'Noto Sans TC', sans-serif;
+  --en-font: 'Roboto', 'Barlow', sans-serif;
 
-  --ch-size: 32px;
-  --py-size: calc(var(--ch-size) * 0.71);
-  --en-size: 36px;
+  /* Type scale — tuned for 1920×1080 presentation output */
+  --ch-size:    52px;
+  --py-size:    32px;
+  --en-size:    44px;
+  --title-size: 62px;   /* 56 * 1.1 titleScale */
+  --label-size: 29px;   /* 22 * 1.3 labelScale */
 
-  --inter-word-gap: 14px;
-  --line-spacing: 0;
-  --section-gap: 1.5rem;
-  --column-gap: 2rem;
+  /* Spacing */
+  --inter-word-gap: 3px;
+  --line-gap:       5px;
+  --section-gap:    1.35rem;
+  --column-gap:     2.5rem;
+  --slide-pad:      80px;
 
-  --text-color: #000;
-  --muted-color: #666;
-  --slide-bg: #fff;
-  --slide-pad: 2rem;
+  /* Pinyin proximity — translateY on <rt>: positive = closer to characters */
+  --py-offset: 6.6px;
+
+  /* Colors */
+  --text-color:     #111111;
+  --muted-color:    #707070;
+  --slide-bg:       #ffffff;
+  --page-bg:        #e4e4e2;
+  --title-py-color: #707070;
 }
 
+/* ── Dark theme ─────────────────────────────────────────────────── */
+.theme-dark {
+  --text-color:     #e8e3d8;
+  --muted-color:    #9a9690;
+  --slide-bg:       #18192a;
+  --page-bg:        #0f1018;
+  --title-py-color: #9a9690;
+}
+
+/* ── Warm cream ──────────────────────────────────────────────────── */
+.theme-warm {
+  --text-color:     #251708;
+  --muted-color:    #8a6a48;
+  --slide-bg:       #fef6e4;
+  --page-bg:        #eddfc8;
+  --title-py-color: #8a6a48;
+}
+
+/* ── Slate ───────────────────────────────────────────────────────── */
+.theme-slate {
+  --text-color:     #e2e8f0;
+  --muted-color:    #94a3b8;
+  --slide-bg:       #0f172a;
+  --page-bg:        #080c18;
+  --title-py-color: #94a3b8;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
 html, body {
-  margin: 0;
-  padding: 0;
+  margin: 0; padding: 0;
   color: var(--text-color);
-  background: #eee;
+  background: var(--page-bg);
   font-family: var(--en-font);
 }
 
+/* ── Slide ──────────────────────────────────────────────────────── */
 .slide {
   display: block;
   background: var(--slide-bg);
@@ -36,131 +84,149 @@ html, body {
   margin: 1rem auto;
   max-width: 1200px;
   aspect-ratio: 16 / 9;
-  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.07);
   page-break-after: always;
   position: relative;
   overflow: hidden;
+  color: var(--text-color);
 }
 
+/* ── Header (book / page ref) ───────────────────────────────────── */
 .slide-header {
   position: absolute;
   top: var(--slide-pad);
   right: var(--slide-pad);
   text-align: right;
   color: var(--muted-color);
-  font-size: 0.9rem;
-  line-height: 1.2;
+  font-family: var(--en-font);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0.03em;
 }
 
+/* ── Title ──────────────────────────────────────────────────────── */
 .title {
-  font-size: 36px;
-  font-weight: normal;
-  margin: 0 0 1rem 0;
+  font-size: var(--title-size);
+  font-weight: 500;
+  margin: 0 0 0.9rem 0;
+  padding-right: 5rem;
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.3em 0.55em;
   align-items: baseline;
+  line-height: 1.15;
+  overflow: hidden;
 }
-.title-zh { font-family: var(--ch-font); }
-.title-py { font-family: var(--py-font); color: var(--muted-color); }
+.title-zh { font-family: var(--ch-font); font-weight: 500; letter-spacing: 0.03em; }
+.title-en { font-family: var(--en-font); font-weight: 500; }
+.title-py {
+  font-family: var(--py-font);
+  font-size: calc(var(--title-size) * 0.72);
+  font-weight: 400;
+  color: var(--title-py-color);
+  letter-spacing: 0.01em;
+}
 
+/* ── Columns ────────────────────────────────────────────────────── */
 .columns {
   display: grid;
   grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
   gap: var(--column-gap);
   align-content: start;
 }
+.column { display: flex; flex-direction: column; min-width: 0; }
 
-.column {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+/* ── Sections ───────────────────────────────────────────────────── */
+.section { margin-bottom: var(--section-gap); break-inside: avoid; }
+.section:last-child { margin-bottom: 0; }
+
+.verse-num {
+  font-family: var(--en-font);
+  font-size: calc(var(--label-size) * 1.3);
+  font-weight: 500;
+  color: var(--muted-color);
+  margin-bottom: 0.15em;
+  letter-spacing: 0.04em;
 }
-
-.section {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.5rem;
-  margin-bottom: var(--section-gap);
-  break-inside: avoid;
-}
-
-.section-chorus,
-.section-refrain,
-.section-bridge {
-  grid-template-columns: 1fr;
-}
-
-.verse-num,
 .section-label {
   font-family: var(--en-font);
-  font-size: 1.05rem;
+  font-size: calc(var(--label-size) * 1.3);
+  font-weight: 500;
+  font-style: italic;
   color: var(--muted-color);
-  padding-top: 0.4em;
+  margin-bottom: 0.2em;
 }
-.section-label { font-style: italic; }
+.section-body { min-width: 0; }
 
-.section-body {
-  min-width: 0;
-}
-
-/* A line is a row of rubies (words) and punctuation, wrapping if needed. */
+/* ── Lines ──────────────────────────────────────────────────────── */
 .line {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  margin-bottom: var(--line-spacing);
+  margin-bottom: var(--line-gap);
 }
 .line:last-child { margin-bottom: 0; }
 
-/* The jukugo ruby: one per pinyin word. CSS Ruby spec sizes each base/rt
-   column to max(base, annotation) with the narrower child centered
-   (ruby-align: center is the default). That's the unit_w = max(pinyin, char)
-   rule from the Python renderer, handled natively. */
+/* ── Ruby / Pinyin ──────────────────────────────────────────────── */
 ruby {
   ruby-position: over;
   ruby-align: center;
   font-family: var(--ch-font);
   font-size: var(--ch-size);
-  line-height: 1.1;
+  font-weight: 400;
+  line-height: 1.15;
 }
-
 rt {
   font-family: var(--py-font);
   font-size: var(--py-size);
+  font-weight: 400;
   line-height: 1;
-  font-weight: normal;
+  color: var(--text-color);
+  opacity: 0.72;
+  transform: translateY(var(--py-offset, 0px));
 }
 
-/* Inter-word gap: between adjacent rubies, and around punctuation. */
-ruby + ruby,
-.punct + ruby,
-ruby + .punct {
-  margin-left: var(--inter-word-gap);
-}
+ruby + ruby { margin-left: var(--inter-word-gap); }
+/* Full-width Chinese punctuation has enough natural space — no extra gap */
+.punct + ruby, ruby + .punct { margin-left: 0; }
 
-.punct {
+.punct, .ch {
   font-family: var(--ch-font);
   font-size: var(--ch-size);
   line-height: 1.2;
   align-self: flex-end;
 }
 
-.ch {
-  font-family: var(--ch-font);
-  font-size: var(--ch-size);
-  line-height: 1.2;
-  align-self: flex-end;
-}
-
-/* English sections: plain paragraph-style lines, no ruby. */
+/* ── English lines ──────────────────────────────────────────────── */
 .line.english {
   font-family: var(--en-font);
   font-size: var(--en-size);
+  font-weight: 400;
   line-height: 1.35;
-  margin-bottom: 0.25em;
   display: block;
+  letter-spacing: -0.005em;
+}
+.line.english:last-child { margin-bottom: 0; }
+
+/* ── Presentation mode (inside <deck-stage>) ────────────────────── */
+deck-stage .slide {
+  width: 1920px;
+  height: 1080px;
+  max-width: none;
+  aspect-ratio: unset;
+  margin: 0;
+  box-shadow: none;
 }
 
+/* English-only slides: use en-font for any zh title spans */
+deck-stage .slide[data-language="english"] .title-zh {
+  font-family: var(--en-font);
+}
+
+.slide-header { font-size: 18px; }
+
+/* ── Print ──────────────────────────────────────────────────────── */
 @media print {
   html, body { background: #fff; }
   .slide { box-shadow: none; margin: 0; max-width: none; }

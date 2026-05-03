@@ -13,12 +13,14 @@ venv/
 # Generated CSS at root (not pinyin_slides/html_assets/slides.css source file)
 /*.css
 
-# Generated output image directories
-out_*_imgs/
+# Generated JS at root (deck-stage.js copied by generate_html.py alongside output)
+/*.js
 
-# Generated font-comparison images at project root
-font_*.png
-font_test_*.png
+# Output directories
+out/
+
+# Backup files
+*.bak
 
 # macOS
 .DS_Store

@@ -33,6 +33,7 @@ from pinyin_slides.parser import parse_lyrics
 log = logging.getLogger(__name__)
 
 _DEFAULT_CSS = Path(__file__).parent / 'pinyin_slides' / 'html_assets' / 'slides.css'
+_DEFAULT_DECK_STAGE = Path(__file__).parent / 'pinyin_slides' / 'html_assets' / 'deck-stage.js'
 
 
 def main():
@@ -124,6 +125,13 @@ def main():
             log.info('Wrote CSS: %s', css_path)
         else:
             log.warning('Default CSS not found at %s; skipping.', _DEFAULT_CSS)
+
+        deck_stage_dest = output_path.with_name('deck-stage.js')
+        if _DEFAULT_DECK_STAGE.exists():
+            shutil.copyfile(_DEFAULT_DECK_STAGE, deck_stage_dest)
+            log.info('Wrote JS:  %s', deck_stage_dest)
+        else:
+            log.warning('deck-stage.js not found at %s; skipping.', _DEFAULT_DECK_STAGE)
 
     log_song_summary(songs, log)
 

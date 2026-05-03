@@ -3,7 +3,7 @@
 Mirrors renderer.py but emits semantic HTML instead of PIL images. Each pinyin
 word becomes a single <ruby> element in jukugo form (one <rt> per character),
 so CSS Ruby's spec-default max(base, annotation) column sizing reproduces the
-unit_w = max(pinyin_w, char_w) rule from renderer.py:_layout_line for free.
+unit_w = max(pinyin, char_w) rule from renderer.py:_layout_line for free.
 
 Usage:
     html = render_document([(song, overrides), ...], title="My Deck")
@@ -18,6 +18,18 @@ from .config import Line, Section, Song, Token, Word
 
 DEFAULT_CHINESE_LINES_PER_COL = 6
 DEFAULT_ENGLISH_LINES_PER_COL = 10
+
+# Google Fonts URL — covers Roboto, Roboto Condensed, Noto Sans HK/TC, Noto Serif TC.
+# Change these to swap the font stack globally.
+GOOGLE_FONTS_URL = (
+    "https://fonts.googleapis.com/css2?"
+    "family=Roboto:ital,wght@0,300;0,400;0,500;1,300;1,400"
+    "&family=Roboto+Condensed:ital,wght@0,300;0,400;0,500;1,300;1,400"
+    "&family=Noto+Sans+HK:wght@300;400;500;700"
+    "&family=Noto+Sans+TC:wght@300;400;500;700"
+    "&family=Noto+Serif+TC:wght@300;400;500;700"
+    "&display=swap"
+)
 
 
 def _escape(s: str) -> str:
@@ -135,7 +147,7 @@ def render_section(section: Section, language: str = 'chinese') -> str:
 
 
 def _render_slide(song: Song, slide_cols: list, header_html: str,
-                  title_html: str, columns: int) -> str:
+                  title_html: str, columns: int, slide_number: int) -> str:
     used_cols = [c for c in slide_cols if c] or [[]]
     effective_cols = len(used_cols)
     cols_html_parts = []
@@ -146,9 +158,11 @@ def _render_slide(song: Song, slide_cols: list, header_html: str,
         f'<div class="columns" style="--cols: {effective_cols}">'
         f'{"".join(cols_html_parts)}</div>'
     )
+    label = f'{slide_number:02d}'
     return (
         f'<section class="slide" data-language="{song.language}" '
-        f'data-columns="{effective_cols}">'
+        f'data-columns="{effective_cols}" '
+        f'data-screen-label="{label}" data-om-validate>'
         f'{header_html}{title_html}{columns_html}'
         f'</section>'
     )
@@ -156,13 +170,16 @@ def _render_slide(song: Song, slide_cols: list, header_html: str,
 
 def render_song(song: Song, overrides: dict,
                 chinese_lines_per_col: int = DEFAULT_CHINESE_LINES_PER_COL,
-                english_lines_per_col: int = DEFAULT_ENGLISH_LINES_PER_COL) -> str:
+                english_lines_per_col: int = DEFAULT_ENGLISH_LINES_PER_COL,
+                slide_counter: list | None = None) -> str:
     """Render a song as one or more <section class="slide"> blocks.
 
-    Sections are packed into slides via `pack_song`. Each packed slide repeats
-    the song's title/header. Per-song overrides (`columns:`, `lines:`) take
-    precedence over the defaults passed in.
+    slide_counter is a mutable [int] used to track the global slide number
+    across songs so data-screen-label is unique per slide.
     """
+    if slide_counter is None:
+        slide_counter = [0]
+
     columns = int(overrides.get('columns', 2) or 2)
 
     default_lines = (
@@ -196,13 +213,16 @@ def render_song(song: Song, overrides: dict,
 
     slides = pack_song(song, columns, lines_per_col)
     if not slides:
-        # No sections → still emit one empty slide with title/header.
         slides = [[[] for _ in range(columns)]]
 
-    return '\n'.join(
-        _render_slide(song, slide_cols, header_html, title_html, columns)
-        for slide_cols in slides
-    )
+    parts = []
+    for slide_cols in slides:
+        slide_counter[0] += 1
+        parts.append(
+            _render_slide(song, slide_cols, header_html, title_html,
+                          columns, slide_counter[0])
+        )
+    return '\n'.join(parts)
 
 
 def render_document(
@@ -212,10 +232,22 @@ def render_document(
     chinese_lines_per_col: int = DEFAULT_CHINESE_LINES_PER_COL,
     english_lines_per_col: int = DEFAULT_ENGLISH_LINES_PER_COL,
 ) -> str:
+    """Render all songs as a deck-stage HTML presentation.
+
+    Each song becomes one or more <section class="slide"> elements that are
+    direct children of <deck-stage>. deck-stage.js handles fullscreen scaling,
+    keyboard navigation, and slide-count overlay.
+
+    Requires deck-stage.js in the same directory as the output .html file.
+    Copy it from: https://github.com/rocklion200-spec/PinyinSlides (or generate
+    alongside the HTML using generate_html.py).
+    """
+    slide_counter = [0]
     slides = '\n'.join(
         render_song(song, overrides,
                     chinese_lines_per_col=chinese_lines_per_col,
-                    english_lines_per_col=english_lines_per_col)
+                    english_lines_per_col=english_lines_per_col,
+                    slide_counter=slide_counter)
         for song, overrides in songs
     )
     return (
@@ -224,10 +256,22 @@ def render_document(
         '<head>\n'
         '<meta charset="utf-8">\n'
         f'<title>{_escape(title)}</title>\n'
+        '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">\n'
+        f'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?'
+        f'family=Roboto:ital,wght@0,300;0,400;0,500;1,300;1,400'
+        f'&family=Roboto+Condensed:ital,wght@0,300;0,400;0,500;1,300;1,400'
+        f'&family=Noto+Sans+HK:wght@300;400;500;700'
+        f'&family=Noto+Sans+TC:wght@300;400;500;700'
+        f'&family=Noto+Serif+TC:wght@300;400;500;700'
+        f'&display=swap">\n'
         f'<link rel="stylesheet" href="{_escape(css_href)}">\n'
+        '<script src="deck-stage.js"></script>\n'
         '</head>\n'
         '<body>\n'
+        '<deck-stage>\n'
         f'{slides}\n'
+        '</deck-stage>\n'
         '</body>\n'
         '</html>\n'
     )

@@ -313,8 +313,11 @@ def render_section(section: Section, config: SlideConfig,
                    trailing_asterisks: int = 0) -> Image.Image:
     """Render a single section as a transparent-background RGBA image.
 
-    section_label: if set, rendered as a plain-text header line above the
-        section content (used for chorus labels like '* Chorus 副歌:').
+    section_label: IGNORED. Kept in the signature for backward compatibility
+        with external callers only — do NOT pass it from new code. Chorus /
+        refrain / bridge labels are now rendered as native pptx text boxes
+        above the image via slidebuilder._add_label_box, which picks up the
+        design font, muted color, and italic styling automatically.
     trailing_asterisks: number of '*' characters appended after the last
         content line, indicating repeated choruses.
     """
@@ -339,26 +342,11 @@ def render_section(section: Section, config: SlideConfig,
         last_total_w = line_layouts[-1][1]
         max_width = max(max_width, last_total_w + ast_w)
 
-    # Width and height for the section label line (if any).
-    # Use the full bbox of the actual label string so mixed ASCII + CJK (e.g.
-    # "* Chorus 副歌:") measures correctly even when the char font lacks
-    # complete ASCII glyphs.
-    label_bbox = char_font.getbbox(section_label) if section_label else None
-    if label_bbox:
-        label_w = label_bbox[2] - label_bbox[0]
-        label_full_h = label_bbox[3] - label_bbox[1]
-        max_width = max(max_width, label_w)
-    else:
-        label_w = 0
-        label_full_h = 0
-
-    # Height: optional label row + top padding + lyric rows
-    label_h = (label_full_h + config.line_spacing) if section_label else 0
+    # Height: top padding + lyric rows (label moved out to native pptx text box).
     num_lines  = len(section.lines)
     img_width  = max(1, int(max_width) + 4)
     img_height = max(1,
-        label_h
-        + config.top_padding
+        config.top_padding
         + num_lines * line_h
         + max(0, num_lines - 1) * config.line_spacing
     )
@@ -367,14 +355,7 @@ def render_section(section: Section, config: SlideConfig,
     draw = ImageDraw.Draw(img)
     text_color = config.text_color
 
-    y = 0
-
-    # Draw section label (e.g. "* Chorus 副歌:") at the top of the image.
-    if section_label:
-        draw.text((0, y), section_label, font=char_font, fill=text_color)
-        y += label_h
-
-    y += config.top_padding
+    y = config.top_padding
 
     for i, (units, line_total_w) in enumerate(line_layouts):
         y_pinyin = y - py_ascent

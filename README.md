@@ -10,6 +10,17 @@ pip install -r requirements.txt
 
 Bundled fonts in `fonts/` are used by default. To use a different font pass `--pinyin-font` / `--char-font`.
 
+## Bundled fonts
+
+| Font | License | Use |
+|---|---|---|
+| Roboto & Roboto Condensed | Apache 2.0 (Christian Robertson / Google Fonts) | English text and pinyin |
+| Noto Sans HK | SIL OFL (Google Noto Project) | Traditional Chinese characters (default) |
+| Noto Sans SC | SIL OFL (Google Noto Project) | Simplified Chinese characters (fallback) |
+| Encode Sans Semi Condensed | SIL OFL (Google Fonts) | Pinyin fallback |
+| M PLUS Rounded 1c | SIL OFL | CJK fallback |
+| Saira Semi Condensed | SIL OFL (Google Fonts) | Pinyin fallback |
+
 ## Usage
 
 ### Build from a lyrics file

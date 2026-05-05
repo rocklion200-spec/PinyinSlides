@@ -51,11 +51,11 @@ class Song:
 # Font directory bundled with the project
 _FONT_DIR = Path(__file__).parent.parent / "fonts"
 
-# Primary defaults: system Inter 28pt (pinyin) + bundled Noto Sans SC (characters).
-# PingFang SC can be selected explicitly via --char-font or TOML.
-_DEFAULT_PINYIN_FONT = str(Path.home() / "Library/Fonts/Inter_28pt-Regular.ttf")
+# Primary defaults: bundled Roboto Condensed (pinyin) + bundled Noto Sans HK (characters).
+# Both ship in fonts/ so PIL works offline. Override via --pinyin-font / --char-font.
+_DEFAULT_PINYIN_FONT = str(_FONT_DIR / "RobotoCondensed-Regular.ttf")
 _DEFAULT_PINYIN_FONT_INDEX = 0
-_DEFAULT_CHAR_FONT = str(_FONT_DIR / "NotoSansSC-Regular.otf")
+_DEFAULT_CHAR_FONT = str(_FONT_DIR / "NotoSansHK-Regular.otf")
 _DEFAULT_CHAR_FONT_INDEX = 0
 
 
@@ -64,11 +64,15 @@ def _resolve_font(path: str, index: int, label: str) -> tuple[str, int]:
     if Path(path).exists():
         return path, index
 
-    # Fallbacks for the Inter pinyin default (Inter variants, then bundled semi-condensed).
+    # Fallbacks: prefer same-family alternatives, then any bundled font of the right type.
     fallbacks = {
         _DEFAULT_PINYIN_FONT: [
+            str(Path.home() / "Library/Fonts/Inter_28pt-Regular.ttf"),
             str(Path.home() / "Library/Fonts/Inter-Regular.ttf"),
             str(_FONT_DIR / "EncodeSansSemiCondensed-Regular.ttf"),
+        ],
+        _DEFAULT_CHAR_FONT: [
+            str(_FONT_DIR / "NotoSansSC-Regular.otf"),
         ],
     }
     for fallback in fallbacks.get(path, []):
@@ -116,6 +120,16 @@ class SlideConfig:
 
     # Colors
     text_color: str = "#000000"
+    # Muted grey for verse numbers, chorus labels, slide-header (book/page),
+    # and title pinyin — matches the HTML design system.
+    muted_color: str = "#707070"
+
+    # PPTX text-box font names (PowerPoint substitutes if not installed locally).
+    # PIL pinyin/character rendering uses the bundled font files above; these
+    # control the native pptx text runs (titles, English lyrics, labels).
+    english_font_name: str = "Roboto"
+    pinyin_pptx_font_name: str = "Roboto Condensed"
+    chinese_pptx_font_name: str = "Noto Sans HK"
 
     # Layout: columns × rows_per_column sections per slide
     # rows_per_column=None means auto-determine from section heights

@@ -239,3 +239,66 @@ def test_place_chorus_returns_failure_when_nothing_fits():
     verse_cols = [[10, 11], [12, 13]]
     cand, ok = _place_chorus_on_slide(verse_cols, 99, fits, n_cols=2)
     assert not ok
+
+
+# ── label_h_per_section budget ───────────────────────────────────────────────
+
+def test_label_budget_strictly_reduces_capacity():
+    """label_h_per_section strictly reduces capacity in a near-full column.
+
+    Builds a fixture where exactly 2 sections fit without the label budget but
+    only 1 fits with the production budget (≈ 0.351"). This proves the kwarg is
+    wired through _max_fit_in_col and not silently ignored.
+
+    The tight image height is computed from first principles so the test stays
+    valid if the global constants ever change — the inner assert will fire with
+    a clear message if the chosen budget makes the fixture infeasible.
+    """
+    _LABEL_BUDGET = 0.351  # matches production _LABEL_BUDGET_IN
+    row_2_no  = (_CONTENT_H - _ROW_GAP) / 2
+    row_2_yes = (_CONTENT_H - _ROW_GAP - 2 * _LABEL_BUDGET) / 2
+    # h must satisfy:
+    #   _CH_PX * row_2_no  / h >= _MIN_CHAR_H_IN  (2 fit without budget)
+    #   _CH_PX * row_2_yes / h  < _MIN_CHAR_H_IN  (2 don't fit with budget)
+    h_max = int(_CH_PX * row_2_no  / _MIN_CHAR_H_IN)      # upper bound (inclusive)
+    h_min = int(_CH_PX * row_2_yes / _MIN_CHAR_H_IN) + 1  # lower bound (exclusive → +1)
+    assert h_min < h_max, (
+        f"Fixture infeasible (h_min={h_min} >= h_max={h_max}); "
+        "constants or budget may have changed."
+    )
+    tight_h = (h_min + h_max) // 2
+    _TIGHT = _img(_IMG_W * 100, tight_h)
+
+    imgs = [_TIGHT] * 4
+    cfg = _config(columns=2)
+
+    count_no_budget   = _max_fit_in_col(imgs, cfg, _IMG_W, _CH_PX, 0, 4, None,
+                                        label_h_per_section=0.0)
+    count_with_budget = _max_fit_in_col(imgs, cfg, _IMG_W, _CH_PX, 0, 4, None,
+                                        label_h_per_section=_LABEL_BUDGET)
+
+    assert count_no_budget == 2
+    assert count_with_budget == 1
+    assert count_with_budget < count_no_budget  # strict: budget demonstrably bites
+
+
+def test_label_budget_zero_unchanged():
+    """Passing label_h_per_section=0.0 is identical to the default (no budget)."""
+    imgs = [_SMALL, _MED, _SMALL, _SMALL]
+    cfg = _config(columns=2)
+
+    default_result = _best_pack_slide(imgs, cfg, _IMG_W, _CH_PX, 0, 4, 2, None)
+    zero_budget_result = _best_pack_slide(imgs, cfg, _IMG_W, _CH_PX, 0, 4, 2, None,
+                                           label_h_per_section=0.0)
+
+    assert default_result == zero_budget_result
+
+
+def test_label_budget_coverage_pack_into_columns():
+    """All sections are still placed when label_h_per_section is set."""
+    imgs = [_SMALL] * 6
+    cfg = _config(columns=2)
+
+    slides = _pack_into_columns(imgs, cfg, _IMG_W, _CH_PX, label_h_per_section=0.351)
+    all_idxs = [vi for slide in slides for col in slide for vi in col]
+    assert sorted(all_idxs) == list(range(len(imgs)))

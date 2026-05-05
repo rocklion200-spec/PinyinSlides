@@ -54,7 +54,6 @@ _CONTENT_W   = _SLIDE_W - _MARGIN_L - _MARGIN_R
 
 _COL_GAP     = 0.20
 _ROW_GAP     = 0.30
-_VERSE_NUM_W = 0.45
 
 # Minimum character height on Chinese slides (inches). Derived from a 28pt
 # floor: 28 / 72 ≈ 0.389", but the PIL render uses a tight bbox without
@@ -190,7 +189,8 @@ def _pack_chinese_with_chorus(verse_d_idxs, chorus_for_verse,
                                 section_imgs, config: SlideConfig,
                                 img_w: float, ch_px: int,
                                 content_h: float, max_rows,
-                                min_char_h: float = None) -> list:
+                                min_char_h: float = None,
+                                label_h_per_section: float = 0.0) -> list:
     """Pack verses into slides; for each slide that contains verses
     referencing a chorus, place the chorus per `_place_chorus_on_slide`.
 
@@ -202,6 +202,10 @@ def _pack_chinese_with_chorus(verse_d_idxs, chorus_for_verse,
     n_cols = config.columns
     n = len(verse_d_idxs)
 
+    def _label_budgets_for(cols_disp):
+        """Indices on this slide that get a label (verse number or chorus heading)."""
+        return {idx: label_h_per_section for col in cols_disp for idx in col}
+
     def fits(cols):
         non_empty = [c for c in cols if c]
         if not non_empty:
@@ -211,7 +215,9 @@ def _pack_chinese_with_chorus(verse_d_idxs, chorus_for_verse,
         # Use the same uniform scale the renderer will apply so the fit
         # check matches what is actually rendered. Pass only non-empty columns
         # to avoid division-by-zero in _uniform_scale_for_slide.
-        scale = _uniform_scale_for_slide(non_empty, section_imgs, img_w, content_h)
+        scale = _uniform_scale_for_slide(
+            non_empty, section_imgs, img_w, content_h,
+            label_budgets=_label_budgets_for(non_empty))
         return ch_px * scale >= min_char_h
 
     slides = []
@@ -227,7 +233,8 @@ def _pack_chinese_with_chorus(verse_d_idxs, chorus_for_verse,
                 j += 1
             sub_imgs = [section_imgs[d] for d in verse_d_idxs[i:j]]
             sub_slides = _pack_into_columns(sub_imgs, config, img_w, ch_px,
-                                              content_h, min_char_h)
+                                              content_h, min_char_h,
+                                              label_h_per_section)
             for sub in sub_slides:
                 slides.append([[verse_d_idxs[i + k] for k in col] for col in sub])
             i = j
@@ -238,7 +245,8 @@ def _pack_chinese_with_chorus(verse_d_idxs, chorus_for_verse,
         sub_imgs_all = [section_imgs[d] for d in verse_d_idxs[i:]]
         upper = _best_pack_slide(sub_imgs_all, config, img_w, ch_px,
                                   0, len(sub_imgs_all), n_cols, max_rows,
-                                  content_h, min_char_h)
+                                  content_h, min_char_h,
+                                  label_h_per_section)
         upper_count = sum(len(c) for c in upper)
         upper_count = max(1, upper_count)
 
@@ -250,7 +258,8 @@ def _pack_chinese_with_chorus(verse_d_idxs, chorus_for_verse,
             sub_imgs = [section_imgs[d] for d in verse_subset]
             verse_cols_local = _best_pack_slide(sub_imgs, config, img_w, ch_px,
                                                   0, N, n_cols, max_rows,
-                                                  content_h, min_char_h)
+                                                  content_h, min_char_h,
+                                                  label_h_per_section)
             if sum(len(c) for c in verse_cols_local) < N:
                 continue  # Packer couldn't fit all N verses — try smaller.
             verse_cols_disp = [[verse_subset[j] for j in col]
@@ -538,14 +547,14 @@ def _add_chinese_slides(prs, blank_layout, song: Song, config: SlideConfig):
         display_sections, labels, trailing_asts = _split_single_section_for_columns(
             display_sections, labels, trailing_asts, config.columns)
     section_imgs = [
-        render_section(s, config, section_label=labels[i],
-                       trailing_asterisks=trailing_asts[i])
+        render_section(s, config, trailing_asterisks=trailing_asts[i])
         for i, s in enumerate(display_sections)
     ]
 
     cols  = config.columns
     col_w = (_CONTENT_W - _COL_GAP * (cols - 1)) / cols
-    img_w_conservative = col_w - _VERSE_NUM_W
+    # Labels now live above each section (no left gutter), so img_w grows.
+    img_w_conservative = col_w - _IMG_NO_NUM_INSET
     ch_px = char_height_px(config)
 
     # Per-slide content top can shift down when the title wraps. Pass the
@@ -568,11 +577,13 @@ def _add_chinese_slides(prs, blank_layout, song: Song, config: SlideConfig):
         slides = _pack_chinese_with_chorus(
             verse_d_idxs, chorus_for_verse, section_imgs, config,
             img_w_conservative, ch_px, content_h, config.rows_per_column,
-            effective_min_char_h)
+            effective_min_char_h,
+            label_h_per_section=_LABEL_BUDGET_IN)
     else:
         slides = _pack_into_columns(section_imgs, config,
                                      img_w_conservative, ch_px,
-                                     content_h, effective_min_char_h)
+                                     content_h, effective_min_char_h,
+                                     label_h_per_section=_LABEL_BUDGET_IN)
 
     for slide_cols in slides:
         slide = prs.slides.add_slide(blank_layout)
@@ -583,16 +594,21 @@ def _add_chinese_slides(prs, blank_layout, song: Song, config: SlideConfig):
 
         if song.title_zh or song.title_py:
             _add_title_box(slide, song.title_zh, song.title_py,
-                           config.text_color, config.book, config.page)
-        _add_book_page_box(slide, config.book, config.page, config.text_color)
+                           config, config.book, config.page)
+        _add_book_page_box(slide, config.book, config.page, config)
 
-        all_section_idxs = [si for col in slide_cols for si in col]
-        any_numbered = any(display_sections[si].number for si in all_section_idxs)
-        num_margin   = _VERSE_NUM_W if any_numbered else 0.0
-        img_inset    = 0.0 if any_numbered else _IMG_NO_NUM_INSET
-        img_w        = col_w - num_margin - img_inset
+        # Labels above lyrics — no left gutter.
+        img_w = col_w - _IMG_NO_NUM_INSET
+        # Reserve label height per section in the column so images don't overlap.
+        label_budgets = {
+            section_idx: _LABEL_BUDGET_IN
+            for col in slide_cols for section_idx in col
+            if display_sections[section_idx].number
+            or labels[section_idx]
+        }
 
-        scale = _uniform_scale_for_slide(slide_cols, section_imgs, img_w, content_h)
+        scale = _uniform_scale_for_slide(slide_cols, section_imgs, img_w,
+                                          content_h, label_budgets=label_budgets)
 
         for col_idx, col_group in enumerate(slide_cols):
             col_left = _MARGIN_L + col_idx * (col_w + _COL_GAP)
@@ -602,16 +618,23 @@ def _add_chinese_slides(prs, blank_layout, song: Song, config: SlideConfig):
                 section = display_sections[section_idx]
                 s_img   = section_imgs[section_idx]
                 img_h   = s_img.height * scale
+                section_label = labels[section_idx]
 
                 if section.number:
-                    _add_text_box(slide, f"{section.number}.",
-                                  left=col_left, top=row_top,
-                                  width=_VERSE_NUM_W, height=img_h,
-                                  font_pt=_VERSE_NUM_PT, align=PP_ALIGN.LEFT,
-                                  color=config.text_color, v_anchor='top')
+                    label_h = _add_label_box(
+                        slide, f"{section.number}.",
+                        left=col_left, top=row_top, width=col_w,
+                        italic=False, config=config)
+                    row_top += label_h
+                elif section_label:
+                    label_h = _add_label_box(
+                        slide, section_label,
+                        left=col_left, top=row_top, width=col_w,
+                        italic=True, config=config)
+                    row_top += label_h
 
                 _place_verse_image(slide, s_img,
-                                   left=col_left + num_margin + img_inset,
+                                   left=col_left + _IMG_NO_NUM_INSET,
                                    top=row_top,
                                    scale=scale)
 
@@ -637,11 +660,9 @@ def _add_english_slides(prs, blank_layout, song: Song, config: SlideConfig):
                                           config.book, config.page)
     content_h   = _SLIDE_H - content_top - 0.30
 
-    # Text width depends on column count; compute once for this song.
+    # Text width: full column (verse numbers no longer occupy a left gutter).
     col_w = (_CONTENT_W - _COL_GAP * (n_cols - 1)) / n_cols
-    any_numbered_any = any(s.number for s in display_sections)
-    num_margin_default = _VERSE_NUM_W if any_numbered_any else 0.0
-    text_width = col_w - num_margin_default
+    text_width = col_w
 
     if chorus_ref_map:
         verse_d_idxs, chorus_for_verse = _verse_and_chorus_indices(
@@ -662,19 +683,13 @@ def _add_english_slides(prs, blank_layout, song: Song, config: SlideConfig):
         bg.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
         if song.title_zh:
-            _add_title_box(slide, song.title_zh, '', config.text_color,
+            _add_title_box(slide, song.title_zh, '', config,
                            config.book, config.page)
-        _add_book_page_box(slide, config.book, config.page, config.text_color)
+        _add_book_page_box(slide, config.book, config.page, config)
 
         n_cols_slide = len(slide_cols)
         slide_col_w = (_CONTENT_W - _COL_GAP * (n_cols_slide - 1)) / n_cols_slide
-
-        any_numbered = any(
-            display_sections[si].number
-            for col in slide_cols for si in col
-        )
-        num_margin = _VERSE_NUM_W if any_numbered else 0.0
-        slide_text_width = slide_col_w - num_margin
+        slide_text_width = slide_col_w
 
         # Pick a single uniform font size that fits the worst column on this
         # slide, accounting for visual line wrap.
@@ -693,7 +708,7 @@ def _add_english_slides(prs, blank_layout, song: Song, config: SlideConfig):
             _render_english_column(
                 slide, display_sections, col_group,
                 labels=labels, trailing_asts=trailing_asts,
-                col_left=col_left, num_margin=num_margin,
+                col_left=col_left,
                 text_width=slide_text_width,
                 font_pt=font_pt, config=config,
                 content_top=content_top,
@@ -759,8 +774,13 @@ def _english_visual_lines_for_line(text: str, font_pt: float,
 def _english_section_visual_lines(section, label: str, n_asts: int,
                                     font_pt: float, text_width_in: float) -> int:
     """Total visual (post-wrap) line count for one English section at the
-    given font and column width."""
-    total = 1 if label else 0
+    given font and column width.
+
+    Counts +1 for either a chorus/refrain/bridge label OR a verse number,
+    since both now render as a leading paragraph above the lyrics.
+    """
+    has_heading = bool(label) or bool(section.number)
+    total = 1 if has_heading else 0
     for i in range(len(section.lines)):
         text = _english_line_text(section, i, n_asts)
         total += _english_visual_lines_for_line(text, font_pt, text_width_in)
@@ -886,19 +906,17 @@ def _pack_english_slide(sections, labels, trailing_asts,
 
 def _render_english_column(slide, sections, section_indices,
                             labels, trailing_asts,
-                            col_left: float, num_margin: float,
+                            col_left: float,
                             text_width: float, font_pt: float, config,
                             content_top: float = None,
                             content_h: float = None):
     """Render one English column as a stack of per-section text boxes.
 
-    Each section gets its own text box so verse numbers (placed in a narrow
-    left column at the same Y) align precisely with the section's first line.
-    Box heights are distributed proportionally across the available column
-    height so estimation errors in the visual-line counter don't create
-    visible gaps. Between sections we leave a one-line gap. `normAutofit` is
-    enabled as a safety net for the rare case where the wrap estimate
-    under-counts.
+    Verse numbers and chorus headings render as the first paragraph of each
+    section's text box (above the lyrics), styled in muted-grey Roboto.
+    Chorus/refrain/bridge headings are italic. Box heights are distributed
+    proportionally across the available column height. `normAutofit` is
+    enabled as a safety net for wrap-estimate undercounts.
     """
     from pptx.enum.text import MSO_ANCHOR
 
@@ -908,8 +926,8 @@ def _render_english_column(slide, sections, section_indices,
         content_h = _CONTENT_H
 
     line_h_in = font_pt * _ENGLISH_LINE_H / 72.0
-    num_font_pt = max(int(round(font_pt * 0.9)), 14)
-    rgb = _parse_color(config.text_color)
+    body_rgb  = _parse_color(config.text_color)
+    muted_rgb = _parse_color(config.muted_color)
     line_spacing = Pt(font_pt * _ENGLISH_LINE_H)
 
     # Proportional height distribution: each section's box gets a share of
@@ -933,9 +951,8 @@ def _render_english_column(slide, sections, section_indices,
         n_asts  = trailing_asts[vi]
         box_h = (vis_per_section[pos] / total_vis) * available_text_h
 
-        text_left = col_left + num_margin
         tx = slide.shapes.add_textbox(
-            Inches(text_left), Inches(y),
+            Inches(col_left), Inches(y),
             Inches(text_width), Inches(box_h))
         tf = tx.text_frame
         tf.word_wrap = True
@@ -949,7 +966,8 @@ def _render_english_column(slide, sections, section_indices,
         _enable_text_shrink_to_fit(tf)
 
         first_para = True
-        def _add_para(text, bold=False):
+        def _add_para(text, *, bold=False, italic=False, color=None,
+                      size_pt=None, font_name=None):
             nonlocal first_para
             p = tf.paragraphs[0] if first_para else tf.add_paragraph()
             first_para = False
@@ -958,44 +976,27 @@ def _render_english_column(slide, sections, section_indices,
             p.line_spacing = line_spacing
             run = p.add_run()
             run.text = text
-            run.font.size = Pt(font_pt)
+            run.font.size = Pt(size_pt if size_pt is not None else font_pt)
             run.font.bold = bold
-            run.font.color.rgb = rgb
-            run.font.name = "Arial"
+            run.font.italic = italic
+            run.font.color.rgb = color if color is not None else body_rgb
+            run.font.name = font_name or config.english_font_name
 
-        if label:
-            _add_para(label)
+        # Label paragraph above lyrics: verse number OR chorus/refrain/bridge heading.
+        if section.number:
+            _add_para(f"{section.number}.",
+                      color=muted_rgb, size_pt=_LABEL_PT,
+                      font_name=config.english_font_name)
+        elif label:
+            _add_para(label,
+                      italic=True, color=muted_rgb, size_pt=_LABEL_PT,
+                      font_name=config.english_font_name)
 
         for line_idx, line in enumerate(section.lines):
             line_text = line.words[0].tokens[0].char if line.words else ""
             if line_idx == len(section.lines) - 1 and n_asts > 0:
                 line_text += ' ' + ' '.join(['*'] * n_asts)
             _add_para(line_text)
-
-        # First-content-line offset within this box
-        first_content_offset = (1 if label else 0) * line_h_in
-        if section.number and num_margin > 0:
-            num_y = y + first_content_offset
-            num_tx = slide.shapes.add_textbox(
-                Inches(col_left), Inches(num_y),
-                Inches(num_margin), Inches(line_h_in + 0.05))
-            num_tf = num_tx.text_frame
-            num_tf.word_wrap = False
-            num_tf.vertical_anchor = MSO_ANCHOR.TOP
-            num_tf.margin_top = 0
-            num_tf.margin_bottom = 0
-            num_tf.margin_left = 0
-            num_tf.margin_right = 0
-            p = num_tf.paragraphs[0]
-            p.alignment = PP_ALIGN.LEFT
-            p.space_before = Pt(0)
-            p.space_after = Pt(0)
-            p.line_spacing = line_spacing
-            run = p.add_run()
-            run.text = f"{section.number}."
-            run.font.size = Pt(num_font_pt)
-            run.font.color.rgb = rgb
-            run.font.name = "Arial"
 
         y += box_h + line_h_in  # inter-section gap = one blank line
 
@@ -1005,12 +1006,15 @@ def _render_english_column(slide, sections, section_indices,
 def _pack_into_columns(section_imgs, config: SlideConfig,
                        img_w: float, ch_px: int,
                        content_h: float = None,
-                       min_char_h: float = None) -> list:
+                       min_char_h: float = None,
+                       label_h_per_section: float = 0.0) -> list:
     """Pack sections into columns/slides, returning a list of slides.
 
     `content_h` overrides the default content area height; pass the per-slide
     available height (which can be smaller when the title wraps).
     `min_char_h` overrides the global _MIN_CHAR_H_IN floor (inches).
+    `label_h_per_section` reserves vertical room for a label drawn ABOVE each
+    section image (verse number / chorus heading); 0 disables.
     """
     if content_h is None:
         content_h = _CONTENT_H
@@ -1024,7 +1028,8 @@ def _pack_into_columns(section_imgs, config: SlideConfig,
     while i < n:
         slide_cols = _best_pack_slide(section_imgs, config, img_w, ch_px,
                                       i, n, config.columns, max_rows,
-                                      content_h, min_char_h)
+                                      content_h, min_char_h,
+                                      label_h_per_section)
         if not slide_cols:
             break
         slides.append(slide_cols)
@@ -1036,7 +1041,8 @@ def _pack_into_columns(section_imgs, config: SlideConfig,
 def _max_fit_in_col(section_imgs, config: SlideConfig, img_w: float, ch_px: int,
                     start: int, n: int, max_rows,
                     content_h: float = None,
-                    min_char_h: float = None) -> int:
+                    min_char_h: float = None,
+                    label_h_per_section: float = 0.0) -> int:
     """Return the max number of sections (starting at `start`) that fit in one column."""
     if content_h is None:
         content_h = _CONTENT_H
@@ -1049,7 +1055,12 @@ def _max_fit_in_col(section_imgs, config: SlideConfig, img_w: float, ch_px: int,
             break
         candidate    = col + [idx]
         rows_in_col  = len(candidate)
-        row_h = (content_h - _ROW_GAP * max(0, rows_in_col - 1)) / rows_in_col
+        # Each section consumes label_h_per_section above its image.
+        labels_h     = rows_in_col * label_h_per_section
+        avail_h      = content_h - _ROW_GAP * max(0, rows_in_col - 1) - labels_h
+        if avail_h <= 0:
+            break
+        row_h = avail_h / rows_in_col
         all_fit = all(
             ch_px * min(
                 img_w / section_imgs[j].width,
@@ -1068,7 +1079,8 @@ def _max_fit_in_col(section_imgs, config: SlideConfig, img_w: float, ch_px: int,
 def _best_pack_slide(section_imgs, config: SlideConfig, img_w: float, ch_px: int,
                      start: int, n: int, n_cols: int, max_rows,
                      content_h: float = None,
-                     min_char_h: float = None) -> list:
+                     min_char_h: float = None,
+                     label_h_per_section: float = 0.0) -> list:
     """Pack sections into n_cols columns starting at `start`."""
     if content_h is None:
         content_h = _CONTENT_H
@@ -1078,7 +1090,8 @@ def _best_pack_slide(section_imgs, config: SlideConfig, img_w: float, ch_px: int
         return []
 
     max_col0 = _max_fit_in_col(section_imgs, config, img_w, ch_px,
-                                start, n, max_rows, content_h, min_char_h)
+                                start, n, max_rows, content_h, min_char_h,
+                                label_h_per_section)
     if max_col0 == 0:
         max_col0 = 1
 
@@ -1093,7 +1106,8 @@ def _best_pack_slide(section_imgs, config: SlideConfig, img_w: float, ch_px: int
     for k in range(1, max_col0 + 1):
         rest       = _best_pack_slide(section_imgs, config, img_w, ch_px,
                                       start + k, n, n_cols - 1, max_rows,
-                                      content_h, min_char_h)
+                                      content_h, min_char_h,
+                                      label_h_per_section)
         rest_total = sum(len(col) for col in rest)
         total      = k + rest_total
         # Prefer larger total; for ties, prefer balanced split (smaller
@@ -1114,19 +1128,31 @@ def _best_pack_slide(section_imgs, config: SlideConfig, img_w: float, ch_px: int
     col0 = list(range(start, start + best_k))
     rest = _best_pack_slide(section_imgs, config, img_w, ch_px,
                             start + best_k, n, n_cols - 1, max_rows,
-                            content_h, min_char_h)
+                            content_h, min_char_h,
+                            label_h_per_section)
     return [col0] + rest
 
 
 def _uniform_scale_for_slide(slide_cols: list, section_imgs,
-                              img_w: float, content_h: float = None) -> float:
-    """Return the uniform scale that makes all sections on a slide the same size."""
+                              img_w: float, content_h: float = None,
+                              label_budgets: dict = None) -> float:
+    """Return the uniform scale that makes all sections on a slide the same size.
+
+    `label_budgets` maps section_index -> inches consumed by a label rendered
+    above the image. The per-row image-height budget shrinks accordingly.
+    """
     if content_h is None:
         content_h = _CONTENT_H
+    if label_budgets is None:
+        label_budgets = {}
     scales = []
     for col_group in slide_cols:
         rows_in_col = len(col_group)
-        row_h = (content_h - _ROW_GAP * max(0, rows_in_col - 1)) / rows_in_col
+        labels_h    = sum(label_budgets.get(vi, 0.0) for vi in col_group)
+        avail_h     = content_h - _ROW_GAP * max(0, rows_in_col - 1) - labels_h
+        if avail_h <= 0 or rows_in_col == 0:
+            continue
+        row_h = avail_h / rows_in_col
         for vi in col_group:
             img = section_imgs[vi]
             scales.append(min(img_w / img.width, row_h / img.height))
@@ -1191,9 +1217,13 @@ def _book_page_reservation_in(book: str, page: str) -> float:
     return min(_TOPRIGHT_RESERVE, max(0.5, bp_w + 0.15))
 
 
-def _add_title_box(slide, title_zh: str, title_py: str, color: str,
+def _add_title_box(slide, title_zh: str, title_py: str, config: SlideConfig,
                     book: str = '', page: str = '') -> float:
     """Add a left-aligned title text box with Chinese and pinyin runs.
+
+    Chinese run uses `config.chinese_pptx_font_name` in `config.text_color`;
+    pinyin run uses `config.pinyin_pptx_font_name` in `config.muted_color`
+    (matches the HTML design's title-py styling).
 
     Shrinks the title font (down to 30 pt) if the default 36 pt would overflow
     the available width. Below that, the title wraps to two lines and the
@@ -1230,23 +1260,24 @@ def _add_title_box(slide, title_zh: str, title_py: str, color: str,
 
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.LEFT
-    rgb = _parse_color(color)
+    text_rgb  = _parse_color(config.text_color)
+    muted_rgb = _parse_color(config.muted_color)
 
     if title_zh:
         r = p.add_run()
         r.text = title_zh
         r.font.size  = Pt(zh_pt)
         r.font.bold  = False
-        r.font.color.rgb = rgb
-        r.font.name  = "Arial"
+        r.font.color.rgb = text_rgb
+        r.font.name  = config.chinese_pptx_font_name
 
     if title_py:
         r = p.add_run()
         r.text = ("  " if title_zh else "") + title_py
         r.font.size  = Pt(py_pt)
         r.font.bold  = False
-        r.font.color.rgb = rgb
-        r.font.name  = "Arial"
+        r.font.color.rgb = muted_rgb
+        r.font.name  = config.pinyin_pptx_font_name
 
     return title_h
 
@@ -1272,7 +1303,7 @@ def _content_top_for_title(title_zh: str, title_py: str,
     return _MARGIN_TOP + title_h + _TITLE_GAP
 
 
-def _add_book_page_box(slide, book: str, page: str, color: str):
+def _add_book_page_box(slide, book: str, page: str, config: SlideConfig):
     """Add a right-aligned book/page reference in the top-right reserved area.
 
     The box width shrinks to the estimated text width so it doesn't reserve
@@ -1292,7 +1323,7 @@ def _add_book_page_box(slide, book: str, page: str, color: str):
     tf.word_wrap = False
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-    rgb = _parse_color(color)
+    rgb = _parse_color(config.muted_color)
     lines = [l for l in (book, page) if l]
     for i, text in enumerate(lines):
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
@@ -1302,13 +1333,15 @@ def _add_book_page_box(slide, book: str, page: str, color: str):
         r.font.size = Pt(_BOOK_PAGE_PT)
         r.font.bold = False
         r.font.color.rgb = rgb
-        r.font.name = "Arial"
+        r.font.name = config.english_font_name
 
 
 def _add_text_box(slide, text: str,
                   left: float, top: float, width: float, height: float,
                   font_pt: int, align, color: str,
-                  bold: bool = False, v_anchor: str = 'middle'):
+                  bold: bool = False, v_anchor: str = 'middle',
+                  font_name: str = "Arial",
+                  italic: bool = False):
     from pptx.enum.text import MSO_ANCHOR
     tx = slide.shapes.add_textbox(
         Inches(left), Inches(top), Inches(width), Inches(height))
@@ -1324,8 +1357,32 @@ def _add_text_box(slide, text: str,
     f = run.font
     f.size  = Pt(font_pt)
     f.bold  = bold
+    f.italic = italic
     f.color.rgb = _parse_color(color)
-    f.name  = "Arial"
+    f.name  = font_name
+
+
+# ── Section labels (verse numbers, chorus headings) ──────────────────────────
+# These now render as native pptx text boxes ABOVE the lyric body, replacing
+# both the old left-gutter verse-number boxes and the chorus labels that used
+# to be baked into PIL images. Matches the HTML design's `.verse-num` /
+# `.section-label` styling: muted grey Roboto, italic for chorus/refrain/bridge.
+_LABEL_PT = 22  # ≈ HTML calc(--label-size * 1.3) at slide-canvas DPI
+_LABEL_LINE_H = 1.15
+_LABEL_BUDGET_IN = _LABEL_PT * _LABEL_LINE_H / 72.0  # ≈ 0.351"
+
+
+def _add_label_box(slide, text: str,
+                   left: float, top: float, width: float,
+                   *, italic: bool, config: SlideConfig) -> float:
+    """Render a section label above its lyric body and return its consumed height (in)."""
+    _add_text_box(slide, text,
+                  left=left, top=top, width=width, height=_LABEL_BUDGET_IN,
+                  font_pt=_LABEL_PT, align=PP_ALIGN.LEFT,
+                  color=config.muted_color, v_anchor='top',
+                  font_name=config.english_font_name,
+                  italic=italic)
+    return _LABEL_BUDGET_IN
 
 
 def _place_verse_image(slide, img, left: float, top: float, scale: float):
